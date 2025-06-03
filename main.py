@@ -18,7 +18,6 @@ OWNER_ID = os.getenv('OWNER_ID')
 STAFF_CHANNEL_ID = os.getenv('STAFF_CHANNEL_ID')
 STAFF_ROLE_ID = os.getenv('STAFF_ROLE_ID')
 NARRATOR_ROLE_ID = "1376724323728887969"
-ADMIN_ROLE_ID = os.getenv('ADMIN_ROLE_ID', '1378286447701786694')
 
 # URL da imagem cyberpunk
 CYBERPUNK_IMAGE = "https://cdn.discordapp.com/attachments/1253559111497285633/1379311708526350406/a0056e1c1c13074905fb8c31e2b1f8ba.png?ex=683fc7a1&is=683e7621&hm=e9c0914e12a1b4dd6f4115290fa74c49ea0f5a68cd4b30efc6410fa8afc4295a&"
@@ -88,14 +87,6 @@ def can_user_interact(interaction, message_id=None):
 def is_owner(user_id):
     """Verificar se é o dono do bot"""
     return str(user_id) == OWNER_ID
-
-def has_admin_role(user):
-    """Verificar se o usuário tem o cargo administrativo necessário"""
-    if hasattr(user, 'roles'):
-        for role in user.roles:
-            if str(role.id) == ADMIN_ROLE_ID:
-                return True
-    return False
 
 def can_edit_category(user):
     """Verificar se pode editar categoria (owner ou cargo específico)"""
@@ -980,36 +971,6 @@ async def help_command(ctx):
 @bot.command(name='editcategoria')
 async def edit_category(ctx):
     """Comando admin para editar permissões de categoria"""
-    # Verificar se tem o cargo administrativo necessário
-    if not has_admin_role(ctx.author) and not is_owner(ctx.author.id):
-        embed = discord.Embed(
-            title='🚫 ACESSO RESTRITO',
-            description=f"""```yaml
-┌─────────────────────────────────────────┐
-│         PERMISSÃO INSUFICIENTE          │
-│            Acesso Negado                │
-└─────────────────────────────────────────┘```
-**Olá, {ctx.author.mention}!** 
-
-Peço desculpas, mas este comando é restrito apenas para membros da administração.
-
-> **Cargo necessário:** <@&{ADMIN_ROLE_ID}>
-> **Motivo:** Comando administrativo sensível
-> **Contato:** Entre em contato com um administrador se precisar de ajuda""",
-            color=0xFF6B6B
-        )
-        embed.add_field(
-            name='💡 **DICA**',
-            value='```fix\nEste comando afeta permissões de múltiplos canais\ne requer autorização especial da administração.```',
-            inline=False
-        )
-        embed.set_thumbnail(url=ctx.author.display_avatar.url)
-        embed.set_image(url=CYBERPUNK_IMAGE)
-        embed.timestamp = datetime.now()
-        embed.set_footer(text='MXP VADOS • Sistema de Segurança', icon_url=bot.user.display_avatar.url)
-        await ctx.send(embed=embed)
-        return
-
     can_edit, permission_type = can_edit_category(ctx.author)
     
     if not can_edit:
