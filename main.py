@@ -40,6 +40,7 @@ temp_staff_data = {}
 temp_narrator_data = {}
 staff_messages = {}  # Armazenar IDs das mensagens de candidatura
 user_processes = {}  # Armazenar IDs de usuários que iniciaram processos
+saved_roles = {}  # Armazenar cargos salvos por usuário: {user_id: role_id}
 
 # Status do bot
 status_messages = [
@@ -1055,18 +1056,114 @@ async def on_command_error(ctx, error):
 
     await ctx.send(embed=embed)
 
+class QuickCategoryModal(discord.ui.Modal, title='⚙️ CATEGORIA RÁPIDA'):
+    def __init__(self, user_id):
+        super().__init__()
+        self.user_id = user_id
+
+    category_id = discord.ui.TextInput(
+        label='ID da Categoria',
+        placeholder='Digite apenas o ID da categoria...',
+        required=True,
+        max_length=20
+    )
+
+    async def on_submit(self, interaction: discord.Interaction):
+        # Verificar permissões novamente
+        can_edit, permission_type = can_edit_category(interaction.user)
+        if not can_edit:
+            await interaction.response.send_message(
+                '❌ **ACESSO NEGADO!** Você não tem permissão para usar este comando.',
+                ephemeral=True
+            )
+            return
+
+        try:
+            category_id = int(self.category_id.value)
+            role_id = saved_roles[self.user_id]
+            
+            category = bot.get_channel(category_id)
+            if not isinstance(category, discord.CategoryChannel):
+                await interaction.response.send_message(
+                    '❌ **ERRO:** ID da categoria inválido ou categoria não encontrada.',
+                    ephemeral=True
+                )
+                return
+
+            role = category.guild.get_role(role_id)
+            if not role:
+                await interaction.response.send_message(
+                    '❌ **ERRO:** Cargo salvo não existe mais. Use o botão "TROCAR CARGO".',
+                    ephemeral=True
+                )
+                return
+
+            # Mostrar menu de permissões
+            embed = discord.Embed(
+                title='⚙️ CONFIGURAR PERMISSÕES',
+                description=f"""```yaml
+┌─────────────────────────────────────────┐
+│         EDITAR PERMISSÕES               │
+│          Controle Total                 │
+└─────────────────────────────────────────┘```
+**Configure as permissões para o cargo selecionado.**
+
+> **Cargo:** {role.name} (💾 salvo)
+> **Categoria:** {category.name}
+> **Canais:** {len(category.channels)} canais serão afetados""",
+                color=0x00FFFF
+            )
+            embed.add_field(
+                name='🔧 **PERMISSÕES DISPONÍVEIS**',
+                value='```fix\n• Ver Canal\n• Enviar Mensagens\n• Gerenciar Mensagens\n• Ler Histórico\n• Conectar (Voz)\n• Falar (Voz)```',
+                inline=False
+            )
+            embed.add_field(
+                name='📋 **INSTRUÇÕES**',
+                value='```css\n[VERDE] = Permitir\n[VERMELHO] = Negar\n[CINZA] = Padrão```',
+                inline=False
+            )
+            embed.set_image(url=CYBERPUNK_IMAGE)
+            embed.timestamp = datetime.now()
+            embed.set_footer(text='MXP VADOS • Sistema Cyber', icon_url=bot.user.display_avatar.url)
+
+            view = PermissionSelectionView(role, category_id, self.user_id)
+            await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
+        except ValueError:
+            await interaction.response.send_message(
+                '❌ **ERRO:** ID deve conter apenas números.',
+                ephemeral=True
+            )
+        except Exception as e:
+            print(f'Erro ao processar categoria: {e}')
+            await interaction.response.send_message(
+                '❌ **ERRO CRÍTICO:** Falha ao processar categoria. Verifique o ID.',
+                ephemeral=True
+            )
+
 class CategoryEditorStartView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
 
     @discord.ui.button(label='INICIAR', style=discord.ButtonStyle.primary, emoji='⚡')
     async def start_editing(self, interaction: discord.Interaction, button: discord.ui.Button):
-        modal = CategoryIDModal()
+        # Verificar se o usuário tem cargo salvo
+        if interaction.user.id in saved_roles:
+            modal = QuickCategoryModal(interaction.user.id)
+        else:
+            modal = CategoryIDModal(interaction.user.id)
         await interaction.response.send_modal(modal)
 
 class CategoryIDModal(discord.ui.Modal, title='⚙️ CONFIGURAR CATEGORIA'):
-    def __init__(self):
+    def __init__(self, user_id):
         super().__init__()
+        self.user_id = user_id
+        
+        # Se o usuário já tem um cargo salvo, pré-preenchemos
+        saved_role = saved_roles.get(user_id)
+        if saved_role:
+            self.role_id.default = str(saved_role)
 
     category_id = discord.ui.TextInput(
         label='ID da Categoria',
@@ -1080,6 +1177,13 @@ class CategoryIDModal(discord.ui.Modal, title='⚙️ CONFIGURAR CATEGORIA'):
         placeholder='Digite o ID do cargo aqui...',
         required=True,
         max_length=20
+    )
+
+    save_role = discord.ui.TextInput(
+        label='Salvar cargo para próximas edições?',
+        placeholder='Digite "sim" para salvar este cargo automaticamente',
+        required=False,
+        max_length=10
     )
 
     async def on_submit(self, interaction: discord.Interaction):
@@ -1112,6 +1216,14 @@ class CategoryIDModal(discord.ui.Modal, title='⚙️ CONFIGURAR CATEGORIA'):
                 )
                 return
 
+            # Verificar se deve salvar o cargo
+            save_response = self.save_role.value.lower().strip()
+            if save_response and any(word in save_response for word in ['sim', 'claro', 'obvio', 'obv', 'quero', 'yes', 's']):
+                saved_roles[self.user_id] = role_id
+                save_msg = f"\n> 💾 **Cargo salvo:** {role.name} será usado nas próximas edições"
+            else:
+                save_msg = ""
+
             # Mostrar menu de permissões
             embed = discord.Embed(
                 title='⚙️ CONFIGURAR PERMISSÕES',
@@ -1124,7 +1236,7 @@ class CategoryIDModal(discord.ui.Modal, title='⚙️ CONFIGURAR CATEGORIA'):
 
 > **Cargo:** {role.name}
 > **Categoria:** {category.name}
-> **Canais:** {len(category.channels)} canais serão afetados""",
+> **Canais:** {len(category.channels)} canais serão afetados{save_msg}""",
                 color=0x00FFFF
             )
             embed.add_field(
@@ -1141,7 +1253,7 @@ class CategoryIDModal(discord.ui.Modal, title='⚙️ CONFIGURAR CATEGORIA'):
             embed.timestamp = datetime.now()
             embed.set_footer(text='MXP VADOS • Sistema Cyber', icon_url=bot.user.display_avatar.url)
 
-            view = PermissionSelectionView(role, category_id)
+            view = PermissionSelectionView(role, category_id, self.user_id)
             await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
         except ValueError:
@@ -1159,10 +1271,11 @@ class CategoryIDModal(discord.ui.Modal, title='⚙️ CONFIGURAR CATEGORIA'):
 
 
 class PermissionSelectionView(discord.ui.View):
-    def __init__(self, role, category_id):
+    def __init__(self, role, category_id, user_id):
         super().__init__(timeout=None)
         self.role = role
         self.category_id = category_id
+        self.user_id = user_id
         self.permissions = {}
         self.add_permissions()
 
@@ -1325,6 +1438,20 @@ class PermissionSelectionView(discord.ui.View):
         # Limpar dados temporários
         if interaction.user.id in temp_staff_data:
             del temp_staff_data[interaction.user.id]
+
+    @discord.ui.button(label='TROCAR CARGO', style=discord.ButtonStyle.primary, emoji='🔄')
+    async def change_role(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # Verificar permissões
+        can_edit, permission_type = can_edit_category(interaction.user)
+        if not can_edit:
+            await interaction.response.send_message(
+                '❌ **ACESSO NEGADO!** Você não tem permissão para usar este comando.',
+                ephemeral=True
+            )
+            return
+
+        modal = CategoryIDModal(interaction.user.id)
+        await interaction.response.send_modal(modal)
 
 class PermissionButton(discord.ui.Button):
     def __init__(self, permission, label, role, category_id, parent_view):
