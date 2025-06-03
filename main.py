@@ -43,10 +43,10 @@ user_processes = {}  # Armazenar IDs de usuários que iniciaram processos
 
 # Status do bot
 status_messages = [
-    {'name': '🔰 MXP Vados | Online', 'type': discord.ActivityType.playing},
+    {'name': '🔰 Digite ;;mxp', 'type': discord.ActivityType.playing},
     {'name': '📋 Analisando candidaturas', 'type': discord.ActivityType.watching},
     {'name': '🎯 Madrid Futebol RP MXP', 'type': discord.ActivityType.competing},
-    {'name': '⚡ ;;mxp para começar', 'type': discord.ActivityType.playing},
+    {'name': '⚡ Digite ;;mxp para começar', 'type': discord.ActivityType.playing},
     {'name': '🚀 Sistema de recrutamento', 'type': discord.ActivityType.listening}
 ]
 current_status_index = 0
@@ -1292,30 +1292,34 @@ class PermissionSelectionView(discord.ui.View):
 
         # Embed final de sucesso
         final_embed = discord.Embed(
-            title='✅ HACK CONCLUÍDO COM SUCESSO',
+            title='🔥 NEURAL BREACH COMPLETED',
             description=f"""```ansi
-[32m┌─────────────────────────────────────────┐[0m
-[32m│           MISSÃO COMPLETA ✓             │[0m
-[32m│        PERMISSÕES HACKEADAS             │[0m
-[32m└─────────────────────────────────────────┘[0m
+[35m╔═══════════════════════════════════════════╗[0m
+[35m║          🚀 CYBERNET INFILTRATION          ║[0m
+[35m║         QUANTUM HACK SUCCESSFUL           ║[0m
+[35m╚═══════════════════════════════════════════╝[0m
 
-[32m[COMPLETED][0m Sistema totalmente comprometido!
-[36m[CATEGORY][0m {category.name}
-[36m[ROLE][0m {role.name}
-[32m[SUCCESS][0m {successful_channels}/{len(category.channels)} canais hackeados
+[36m[🔮 NEURAL-LINK][0m Matrix connection established
+[32m[⚡ QUANTUM-CORE][0m {category.name} >> BREACHED
+[33m[🎯 TARGET-ROLE][0m {role.name} >> COMPROMISED
+[32m[💎 DATA-FLOW][0m {successful_channels}/{len(category.channels)} nodes synchronized
 
-[35m=== RELATÓRIO FINAL ===[0m
-[32m• Permissões aplicadas com sucesso[0m
-[32m• Sistema de segurança burlado[0m
-[32m• Acesso total concedido[0m
-[32m• Rastros apagados automaticamente[0m
+[35m╭─── 🌐 CYBER DOMINANCE REPORT ───╮[0m
+[32m│ ⚡ Neural pathways reconfigured     │[0m
+[32m│ 🔥 Firewall protocols bypassed     │[0m
+[32m│ 💾 Memory banks restructured       │[0m
+[32m│ 🛡️ Security matrix overwritten     │[0m
+[32m│ 🌟 Digital DNA successfully merged │[0m
+[35m╰────────────────────────────────────╯[0m
 
-[33m[HACKER][0m YevgennyMXP - Sistema MXP dominado[0m```""",
-            color=0x00FF00
+[33m[👑 ARCHITECT][0m YevgennyMXP >> Neo-Tokyo Protocol Active
+[36m[🔮 VADOS-AI][0m Permission matrix successfully evolved
+[32m[⚡ STATUS][0m Cyberpunk realm fully synchronized```""",
+            color=0xFF00FF
         )
         final_embed.set_image(url=CYBERPUNK_IMAGE)
         final_embed.timestamp = datetime.now()
-        final_embed.set_footer(text='🔐 MXP HACKER SYSTEM • HACK FINALIZADO', icon_url=bot.user.display_avatar.url)
+        final_embed.set_footer(text='🔮 VADOS NEURAL NETWORK • QUANTUM BREACH FINALIZED', icon_url=bot.user.display_avatar.url)
 
         try:
             await interaction.edit_original_response(embed=final_embed)
