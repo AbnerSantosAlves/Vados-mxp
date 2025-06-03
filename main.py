@@ -859,11 +859,6 @@ async def handle_main_menu(interaction):
         inline=True
     )
     embed.add_field(
-        name='🔒 **PROTEÇÃO DE DADOS**',
-        value='```fix\nTodos os dados são confidenciais conforme LGPD```\n**[Clique aqui para saber mais](https://www.gov.br/susep/pt-br/assuntos/lei-geral-de-protecao-de-dados-pessoais-lgpd)**',
-        inline=False
-    )
-    embed.add_field(
         name='⚡ **SISTEMA STATUS**',
         value='```css\n[ONLINE] Todos os sistemas operacionais\n[ATIVO] Processamento de candidaturas\n[OK] Conexão estável```',
         inline=False
