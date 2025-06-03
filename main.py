@@ -1019,7 +1019,7 @@ async def edit_category(ctx):
     )
     embed.add_field(
         name='📋 **INSTRUÇÕES**',
-        value='```fix\n1. Insira o ID da categoria\n2. Selecione o cargo a configurar\n3. Configure as permissões\n4. Aplique as mudanças```',
+        value='```fix\n1. Insira o ID da categoria\n2. Insira o ID do cargo\n3. Configure as permissões\n4. Aplique as mudanças```',
         inline=False
     )
     embed.set_image(url=CYBERPUNK_IMAGE)
@@ -1064,13 +1064,20 @@ class CategoryEditorStartView(discord.ui.View):
         modal = CategoryIDModal()
         await interaction.response.send_modal(modal)
 
-class CategoryIDModal(discord.ui.Modal, title='⚙️ ID DA CATEGORIA'):
+class CategoryIDModal(discord.ui.Modal, title='⚙️ CONFIGURAR CATEGORIA'):
     def __init__(self):
         super().__init__()
 
     category_id = discord.ui.TextInput(
         label='ID da Categoria',
         placeholder='Digite o ID da categoria aqui...',
+        required=True,
+        max_length=20
+    )
+
+    role_id = discord.ui.TextInput(
+        label='ID do Cargo',
+        placeholder='Digite o ID do cargo aqui...',
         required=True,
         max_length=20
     )
@@ -1087,128 +1094,28 @@ class CategoryIDModal(discord.ui.Modal, title='⚙️ ID DA CATEGORIA'):
 
         try:
             category_id = int(self.category_id.value)
+            role_id = int(self.role_id.value)
+            
             category = bot.get_channel(category_id)
-
             if not isinstance(category, discord.CategoryChannel):
                 await interaction.response.send_message(
-                    '❌ **ERRO:** ID inválido ou categoria não encontrada.',
+                    '❌ **ERRO:** ID da categoria inválido ou categoria não encontrada.',
                     ephemeral=True
                 )
                 return
 
-            # Armazenar o ID da categoria
-            temp_staff_data[interaction.user.id] = {
-                'category_id': category_id,
-                'category_name': category.name
-            }
-
-            # Criar lista de cargos como dropdown
-            options = []
-            for role in category.guild.roles:
-                if role.name != "@everyone" and not role.managed:
-                    options.append(discord.SelectOption(
-                        label=role.name[:100],  # Limitar tamanho
-                        description=f"ID: {role.id}",
-                        value=str(role.id)
-                    ))
-
-            if not options:
+            role = category.guild.get_role(role_id)
+            if not role:
                 await interaction.response.send_message(
-                    '❌ **ERRO:** Nenhum cargo válido encontrado no servidor.',
+                    '❌ **ERRO:** ID do cargo inválido ou cargo não encontrado.',
                     ephemeral=True
                 )
                 return
 
-            # Limitar a 25 opções (limite do Discord)
-            if len(options) > 25:
-                options = options[:25]
-
+            # Mostrar menu de permissões
             embed = discord.Embed(
-                title='⚙️ SELECIONE O CARGO',
+                title='⚙️ CONFIGURAR PERMISSÕES',
                 description=f"""```yaml
-┌─────────────────────────────────────────┐
-│         ESCOLHA O CARGO                │
-│    Categoria: {category.name[:20]}{'...' if len(category.name) > 20 else ''}
-└─────────────────────────────────────────┘```
-**Selecione o cargo que deseja configurar.**
-
-> **Categoria:** {category.name}
-> **Canais:** {len(category.channels)} canais
-> **Função:** Editar permissões em massa""",
-                color=0x00FFFF
-            )
-            embed.add_field(
-                name='📋 **INSTRUÇÕES**',
-                value='```fix\n1. Selecione um cargo no dropdown\n2. Configure as permissões\n3. Aplique as mudanças```',
-                inline=False
-            )
-            embed.set_image(url=CYBERPUNK_IMAGE)
-            embed.timestamp = datetime.now()
-            embed.set_footer(text='MXP VADOS • Sistema Cyber', icon_url=bot.user.display_avatar.url)
-
-            view = RoleSelectionDropdownView(category_id, options)
-            await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
-
-        except ValueError:
-            await interaction.response.send_message(
-                '❌ **ERRO:** ID deve conter apenas números.',
-                ephemeral=True
-            )
-        except Exception as e:
-            print(f'Erro ao processar ID da categoria: {e}')
-            await interaction.response.send_message(
-                '❌ **ERRO CRÍTICO:** Falha ao processar categoria. Verifique o ID.',
-                ephemeral=True
-            )
-
-class RoleSelectionDropdownView(discord.ui.View):
-    def __init__(self, category_id, options):
-        super().__init__(timeout=300)
-        self.category_id = category_id
-        self.add_item(RoleDropdown(category_id, options))
-
-class RoleDropdown(discord.ui.Select):
-    def __init__(self, category_id, options):
-        super().__init__(placeholder="🎯 Selecione um cargo...", options=options)
-        self.category_id = category_id
-
-    async def callback(self, interaction: discord.Interaction):
-        # Verificar permissões
-        can_edit, permission_type = can_edit_category(interaction.user)
-        if not can_edit:
-            await interaction.response.send_message(
-                '❌ **ACESSO NEGADO!** Você não tem permissão para usar este comando.',
-                ephemeral=True
-            )
-            return
-
-        # Armazenar o ID do cargo
-        user_data = temp_staff_data.get(interaction.user.id)
-        if not user_data:
-            await interaction.response.send_message(
-                '❌ **ERRO:** Dados da categoria não encontrados. Reinicie o processo.',
-                ephemeral=True
-            )
-            return
-
-        role_id = int(self.values[0])
-        category = bot.get_channel(self.category_id)
-        role = category.guild.get_role(role_id)
-
-        if not role:
-            await interaction.response.send_message(
-                '❌ **ERRO:** Cargo não encontrado.',
-                ephemeral=True
-            )
-            return
-
-        user_data['role_id'] = role_id
-        user_data['role_name'] = role.name
-
-        # Mostrar menu de permissões
-        embed = discord.Embed(
-            title='⚙️ CONFIGURAR PERMISSÕES',
-            description=f"""```yaml
 ┌─────────────────────────────────────────┐
 │         EDITAR PERMISSÕES               │
 │          Controle Total                 │
@@ -1218,24 +1125,38 @@ class RoleDropdown(discord.ui.Select):
 > **Cargo:** {role.name}
 > **Categoria:** {category.name}
 > **Canais:** {len(category.channels)} canais serão afetados""",
-            color=0x00FFFF
-        )
-        embed.add_field(
-            name='🔧 **PERMISSÕES DISPONÍVEIS**',
-            value='```fix\n• Ver Canal\n• Enviar Mensagens\n• Gerenciar Mensagens\n• Ler Histórico\n• Conectar (Voz)\n• Falar (Voz)```',
-            inline=False
-        )
-        embed.add_field(
-            name='📋 **INSTRUÇÕES**',
-            value='```css\n[VERDE] = Permitir\n[VERMELHO] = Negar\n[CINZA] = Padrão```',
-            inline=False
-        )
-        embed.set_image(url=CYBERPUNK_IMAGE)
-        embed.timestamp = datetime.now()
-        embed.set_footer(text='MXP VADOS • Sistema Cyber', icon_url=bot.user.display_avatar.url)
+                color=0x00FFFF
+            )
+            embed.add_field(
+                name='🔧 **PERMISSÕES DISPONÍVEIS**',
+                value='```fix\n• Ver Canal\n• Enviar Mensagens\n• Gerenciar Mensagens\n• Ler Histórico\n• Conectar (Voz)\n• Falar (Voz)```',
+                inline=False
+            )
+            embed.add_field(
+                name='📋 **INSTRUÇÕES**',
+                value='```css\n[VERDE] = Permitir\n[VERMELHO] = Negar\n[CINZA] = Padrão```',
+                inline=False
+            )
+            embed.set_image(url=CYBERPUNK_IMAGE)
+            embed.timestamp = datetime.now()
+            embed.set_footer(text='MXP VADOS • Sistema Cyber', icon_url=bot.user.display_avatar.url)
 
-        view = PermissionSelectionView(role, self.category_id)
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+            view = PermissionSelectionView(role, category_id)
+            await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
+        except ValueError:
+            await interaction.response.send_message(
+                '❌ **ERRO:** IDs devem conter apenas números.',
+                ephemeral=True
+            )
+        except Exception as e:
+            print(f'Erro ao processar IDs: {e}')
+            await interaction.response.send_message(
+                '❌ **ERRO CRÍTICO:** Falha ao processar categoria/cargo. Verifique os IDs.',
+                ephemeral=True
+            )
+
+
 
 class PermissionSelectionView(discord.ui.View):
     def __init__(self, role, category_id):
