@@ -308,6 +308,11 @@ class StaffModal2(discord.ui.Modal, title='👮‍♂️ CANDIDATURA STAFF | ETA
                 color=0x00FF00
             )
             success_embed.add_field(
+                name='🔒 **PROTEÇÃO DE DADOS PESSOAIS**',
+                value='```fix\nTodos os seus dados (nome, idade) são tratados com\nmáxima confidencialidade seguindo a LGPD.```\n**[Clique aqui para saber mais sobre a Lei](https://www.gov.br/susep/pt-br/assuntos/lei-geral-de-protecao-de-dados-pessoais-lgpd)**',
+                inline=False
+            )
+            success_embed.add_field(
                 name='📋 **PRÓXIMOS PASSOS**',
                 value='```fix\n1. Aguarde a análise\n2. Receba notificação por DM\n3. Se aprovado, receba o cargo```',
                 inline=False
