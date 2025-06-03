@@ -18,6 +18,7 @@ OWNER_ID = os.getenv('OWNER_ID')
 STAFF_CHANNEL_ID = os.getenv('STAFF_CHANNEL_ID')
 STAFF_ROLE_ID = os.getenv('STAFF_ROLE_ID')
 NARRATOR_ROLE_ID = "1376724323728887969"
+ADMIN_CHANNEL_ID = "1378286447701786694"
 
 # URL da imagem cyberpunk
 CYBERPUNK_IMAGE = "https://cdn.discordapp.com/attachments/1253559111497285633/1379311708526350406/a0056e1c1c13074905fb8c31e2b1f8ba.png?ex=683fc7a1&is=683e7621&hm=e9c0914e12a1b4dd6f4115290fa74c49ea0f5a68cd4b30efc6410fa8afc4295a&"
@@ -103,6 +104,36 @@ def can_edit_category(user):
                 return True, "authorized_role"
     
     return False, None
+
+def has_admin_permissions(user):
+    """Verificar se tem permissões administrativas"""
+    user_id = user.id if hasattr(user, 'id') else user
+    
+    if is_owner(user_id):
+        return True
+    
+    # Verificar se tem permissões de administrador
+    if hasattr(user, 'guild_permissions') and user.guild_permissions.administrator:
+        return True
+    
+    return False
+
+def check_admin_channel_permissions(ctx_or_interaction):
+    """Verificar permissões específicas para o canal administrativo"""
+    # Determinar se é um contexto de comando ou interaction
+    if hasattr(ctx_or_interaction, 'channel'):
+        channel = ctx_or_interaction.channel
+        user = ctx_or_interaction.author if hasattr(ctx_or_interaction, 'author') else ctx_or_interaction.user
+    else:
+        channel = ctx_or_interaction.channel
+        user = ctx_or_interaction.user
+    
+    # Se não for o canal administrativo específico, permitir
+    if str(channel.id) != ADMIN_CHANNEL_ID:
+        return True
+    
+    # Se for o canal administrativo, verificar permissões
+    return has_admin_permissions(user)
 
 class StaffModal1(discord.ui.Modal, title='👮‍♂️ CANDIDATURA STAFF | ETAPA 1/2'):
     def __init__(self):
@@ -890,6 +921,30 @@ async def menu_prefix(ctx):
 
 @bot.command(name='ping')
 async def ping(ctx):
+    # Verificar se está no canal administrativo e se tem permissões
+    if str(ctx.channel.id) == ADMIN_CHANNEL_ID and not check_admin_channel_permissions(ctx):
+        embed = discord.Embed(
+            title='🚫 ACESSO RESTRITO',
+            description=f"""```yaml
+┌─────────────────────────────────────────┐
+│           CANAL ADMINISTRATIVO          │
+│            Acesso Negado                │
+└─────────────────────────────────────────┘```
+**Desculpe, este comando só pode ser usado por administradores neste canal.**
+
+> **Canal:** <#{ADMIN_CHANNEL_ID}>
+> **Requerido:** Permissões de Administrador
+> **Seu nível:** Usuário comum
+
+*Agradecemos sua compreensão e respeito às regras do servidor.*""",
+            color=0xFF6B00
+        )
+        embed.set_image(url=CYBERPUNK_IMAGE)
+        embed.timestamp = datetime.now()
+        embed.set_footer(text='MXP VADOS • Sistema de Segurança', icon_url=bot.user.display_avatar.url)
+        await ctx.send(embed=embed)
+        return
+
     latency = round(bot.latency * 1000)
 
     embed = discord.Embed(
@@ -966,6 +1021,30 @@ async def help_command(ctx):
 @bot.command(name='editcategoria')
 async def edit_category(ctx):
     """Comando admin para editar permissões de categoria"""
+    # Verificar permissões do canal administrativo primeiro
+    if not check_admin_channel_permissions(ctx):
+        embed = discord.Embed(
+            title='🚫 ACESSO RESTRITO',
+            description=f"""```yaml
+┌─────────────────────────────────────────┐
+│           CANAL ADMINISTRATIVO          │
+│            Acesso Negado                │
+└─────────────────────────────────────────┘```
+**Desculpe, este comando só pode ser usado por administradores neste canal.**
+
+> **Canal:** <#{ADMIN_CHANNEL_ID}>
+> **Requerido:** Permissões de Administrador
+> **Seu nível:** Usuário comum
+
+*Agradecemos sua compreensão e respeito às regras do servidor.*""",
+            color=0xFF6B00
+        )
+        embed.set_image(url=CYBERPUNK_IMAGE)
+        embed.timestamp = datetime.now()
+        embed.set_footer(text='MXP VADOS • Sistema de Segurança', icon_url=bot.user.display_avatar.url)
+        await ctx.send(embed=embed)
+        return
+    
     can_edit, permission_type = can_edit_category(ctx.author)
     
     if not can_edit:
